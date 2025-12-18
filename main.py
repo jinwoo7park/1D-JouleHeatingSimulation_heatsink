@@ -43,7 +43,9 @@ rho_layers_effective[0] = rho_layers[0] * glass_thickness_scale_factor  # Glass�
 
 voltage = 2.9 # Operating Voltage (V)
 current_density = 300.0 # Current density (A/m^2, = 10* mA/cm^2)
-Q_A = voltage * current_density
+eqe = 0.2 # External Quantum Efficiency (20%)
+# EQE를 고려한 실제 Joule heating: Q_effective = Q_A * (1 - EQE)
+Q_A = voltage * current_density * (1 - eqe)
 
 epsilon_top = 0.05 # Emissivity_top (cathode)
 epsilon_bottom = 0.85 # Emissivity)_bottom (glass)

@@ -23,6 +23,7 @@ const DEFAULT_VALUES = {
   thickness_layers_nm: [1100000, 70, 80, 280, 50, 100],
   voltage: 2.9,
   current_density: 300.0,
+  eqe: 0.2, // External Quantum Efficiency (20%)
   epsilon_top: 0.05,
   epsilon_bottom: 0.85,
   h_conv: 10.0,
@@ -340,6 +341,7 @@ function App() {
       inputParamsData.push(['전기적 파라미터', ''])
       inputParamsData.push(['전압 (V)', Number(formData.voltage)])
       inputParamsData.push(['전류 밀도 (A/m²)', Number(formData.current_density)])
+      inputParamsData.push(['EQE (External Quantum Efficiency)', Number(formData.eqe)])
       
       // 빈 행 추가
       inputParamsData.push([])
@@ -490,6 +492,17 @@ function App() {
                     value={formData.current_density}
                     onChange={(e) => handleGlobalChange('current_density', e.target.value)}
                     step="1"
+                  />
+                </div>
+                <div className="input-field">
+                  <label>EQE (External Quantum Efficiency)</label>
+                  <input
+                    type="number"
+                    value={formData.eqe}
+                    onChange={(e) => handleGlobalChange('eqe', e.target.value)}
+                    step="0.01"
+                    min="0"
+                    max="1"
                   />
                 </div>
               </div>

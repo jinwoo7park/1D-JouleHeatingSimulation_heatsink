@@ -44,7 +44,9 @@ class handler(BaseHTTPRequestHandler):
             
             voltage = data['voltage']
             current_density = data['current_density']
-            Q_A = voltage * current_density
+            eqe = data.get('eqe', 0.2)  # 기본값 20%
+            # EQE를 고려한 실제 Joule heating: Q_effective = Q_A * (1 - EQE)
+            Q_A = voltage * current_density * (1 - eqe)
             
             epsilon_top = data['epsilon_top']
             epsilon_bottom = data['epsilon_bottom']
