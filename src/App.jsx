@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import './App.css'
 import { 
   LineChart, 
@@ -39,6 +39,12 @@ const DEFAULT_VALUES = {
 }
 
 function App() {
+  // 인증 상태 관리
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [password, setPassword] = useState('')
+  const [authError, setAuthError] = useState('')
+  const [authLoading, setAuthLoading] = useState(false)
+  
   const [logoError, setLogoError] = useState(false)
   const [formData, setFormData] = useState(DEFAULT_VALUES)
   const [simulationResult, setSimulationResult] = useState(null)
@@ -46,6 +52,47 @@ function App() {
   const [error, setError] = useState(null)
   const chart1Ref = useRef(null)
   const chart2Ref = useRef(null)
+
+  // 컴포넌트 마운트 시 sessionStorage에서 인증 상태 확인
+  useEffect(() => {
+    const authStatus = sessionStorage.getItem('isAuthenticated')
+    if (authStatus === 'true') {
+      setIsAuthenticated(true)
+    }
+  }, [])
+
+  // 비밀번호 인증 핸들러
+  const handleAuth = async (e) => {
+    e.preventDefault()
+    setAuthError('')
+    setAuthLoading(true)
+
+    try {
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        // 인증 성공 시 sessionStorage에 저장
+        sessionStorage.setItem('isAuthenticated', 'true')
+        setIsAuthenticated(true)
+        setPassword('')
+      } else {
+        setAuthError(data.message || '비밀번호가 올바르지 않습니다.')
+      }
+    } catch (err) {
+      console.error('인증 오류:', err)
+      setAuthError('서버에 연결할 수 없습니다. 다시 시도해주세요.')
+    } finally {
+      setAuthLoading(false)
+    }
+  }
 
   // 두께 단위 변환 함수들
   const convertToNm = (value, unit) => {
@@ -516,6 +563,119 @@ function App() {
     }
   }
 
+  // 인증되지 않은 경우 비밀번호 입력 화면 표시
+  if (!isAuthenticated) {
+    return (
+      <div className="app">
+        <div className="container" style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '100vh',
+          flexDirection: 'column'
+        }}>
+          <div style={{
+            maxWidth: '400px',
+            width: '100%',
+            padding: '40px',
+            backgroundColor: '#fff',
+            borderRadius: '12px',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div className="title-section" style={{ marginBottom: '30px', textAlign: 'center' }}>
+              <div className="title-content">
+                <h1 style={{ marginBottom: '10px' }}>Joule Heating Simulation</h1>
+                <p className="subtitle" style={{ marginBottom: '20px' }}>
+                  Heat dissipation in PeLED operation using 1D heat equation
+                </p>
+              </div>
+              <img
+                src="/PNEL_logo.png"
+                alt="PNEL Logo"
+                className="title-logo"
+                onError={() => setLogoError(true)}
+                style={{ 
+                  display: logoError ? 'none' : 'block',
+                  margin: '0 auto 20px',
+                  maxWidth: '150px'
+                }}
+              />
+            </div>
+            
+            <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div>
+                <label htmlFor="password" style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: '600',
+                  color: '#333'
+                }}>
+                  비밀번호
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="비밀번호를 입력하세요"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    fontSize: '16px',
+                    border: '2px solid #ddd',
+                    borderRadius: '6px',
+                    boxSizing: 'border-box'
+                  }}
+                  autoFocus
+                  disabled={authLoading}
+                />
+              </div>
+              
+              {authError && (
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#fee',
+                  color: '#c33',
+                  borderRadius: '6px',
+                  fontSize: '14px'
+                }}>
+                  {authError}
+                </div>
+              )}
+              
+              <button
+                type="submit"
+                disabled={authLoading || !password}
+                style={{
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#fff',
+                  backgroundColor: authLoading || !password ? '#ccc' : '#333',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: authLoading || !password ? 'not-allowed' : 'pointer',
+                  transition: 'background-color 0.3s'
+                }}
+              >
+                {authLoading ? '인증 중...' : '로그인'}
+              </button>
+            </form>
+            
+            <p style={{
+              marginTop: '20px',
+              fontSize: '12px',
+              color: '#666',
+              textAlign: 'center'
+            }}>
+              브라우저 탭을 닫으면 세션이 만료됩니다.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="app">
       <div className="container">
@@ -853,44 +1013,7 @@ function App() {
                       </div>
                     )
                   })()}
-                  {/* 활성층 레이어 라벨 */}
-                  {getLayerAreas().map((area, idx) => {
-                    const xMin = -200
-                    const xMax = 580
-                    const xPercent = ((area.centerX - xMin) / (xMax - xMin)) * 100
-                    // 온도 범위에 따라 라벨 위치 자동 조정
-                    const tempRange = getTemperatureRange()
-                    const activeProfile = getActiveProfile()
-                    // 해당 영역의 온도 값 찾기
-                    const areaTemps = activeProfile
-                      .filter(p => p.position >= area.x1 && p.position <= area.x2)
-                      .map(p => p.temperature)
-                    const areaMaxTemp = areaTemps.length > 0 ? Math.max(...areaTemps) : tempRange.max
-                    // 온도를 Y 위치로 변환 (그래프 높이의 10% 여백 고려)
-                    const yPercent = ((tempRange.max - areaMaxTemp) / (tempRange.max - tempRange.min)) * 80 + 10
-                    return (
-                      <div
-                        key={`label-${idx}`}
-                        style={{
-                          position: 'absolute',
-                          left: `${xPercent}%`,
-                          transform: 'translateX(-50%)',
-                          top: `${Math.max(5, Math.min(95, yPercent))}%`,
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          color: '#333',
-                          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                          padding: '2px 6px',
-                          borderRadius: '3px',
-                          whiteSpace: 'nowrap',
-                          border: `1px solid ${area.color}`,
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                        }}
-                      >
-                        {area.name}
-                      </div>
-                    )
-                  })}
+                  {/* 활성층 레이어 라벨 제거 (Glass만 표시) */}
                 </div>
               </div>
 
